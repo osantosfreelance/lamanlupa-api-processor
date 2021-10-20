@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:file="http://www.mulesoft.org/schema/mule/file" xmlns:java="http://www.mulesoft.org/schema/mule/java"
+	xmlns:validation="http://www.mulesoft.org/schema/mule/validation"
+	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/validation http://www.mulesoft.org/schema/mule/validation/current/mule-validation.xsd
+http://www.mulesoft.org/schema/mule/java http://www.mulesoft.org/schema/mule/java/current/mule-java.xsd
+http://www.mulesoft.org/schema/mule/file http://www.mulesoft.org/schema/mule/file/current/mule-file.xsd">
+	<http:listener-config name="Lamanlupa-API-HTML_Listener_Config" doc:name="HTTP Listener config" doc:id="4042e36b-eb3a-48dd-857d-4797185530e6" basePath="lamanlupa" >
+		<http:listener-connection host="0.0.0.0" port="8081" />
+	</http:listener-config>
+	<http:request-config name="Lamanlupa_HTTP_Request_Configuration" doc:name="HTTP Request configuration" doc:id="a7a68131-fea6-4b54-b05d-f23faf720923">
+		<http:request-connection host="earthquake.usgs.gov" protocol="HTTPS"/>
+	</http:request-config>
+	<flow name="lamanlupaearthquakeapiFlow" doc:id="e7f44019-22f8-461b-8430-3f2c9a26e2f6" >
+		<http:listener doc:name="Lamanlupa API" doc:id="35acceaf-ed83-48bc-baad-ada93bdd5075" config-ref="Lamanlupa-API-HTML_Listener_Config" path="/ph" outputMimeType="application/json">
+			<http:error-response>
+				<http:body ><![CDATA[#[%dw 2.0
+output application/json
+
+--- 
+{
+	status: "FAILED",
+	errorCode: attributes.statusCode,
+	errorDescription: (error.description splitBy(": "))[-1]
+}]]]></http:body>
+			</http:error-response>
+		</http:listener>
+		<http:request method="GET" doc:name="Earthquake API" doc:id="2cbcdd98-aae7-4947-8b5e-899e43afe597" config-ref="Lamanlupa_HTTP_Request_Configuration" path="/fdsnws/event/1/query">
+			<ee:repeatable-file-store-stream bufferUnit="MB" />
+			<http:query-params><![CDATA[#[%dw 2.0
+import modules::DateUtils as dateUtils
+output application/java
+---
+{
+	format : "geojson",
+	endtime : dateUtils::today(),
+	starttime : dateUtils::minusDays(dateUtils::today(), |P30D|),
+	minlatitude : 0,
+	maxlatitude : 25,
+	minlongitude : 110,
+	maxlongitude : 150
+	
+}]]]></http:query-params>
+		</http:request>
+		<ee:transform doc:name="Transform EarthquakeAPIResponse" doc:id="b96b9986-4154-41ed-b822-39119f86902c" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+import modules::DateUtils as dateUtils
+output application/json
+
+---
+{
+	"gathered: ": dateUtils::epochToDateTime(payload.metadata.generated),
+	"records: ": payload.features.properties filter($.place contains "Philippines") map ( property , indexOfFeature ) -> {
+		location: property.place,
+		magnitude: property.mag,
+		date: dateUtils::epochToDate(property.time),
+		time: dateUtils::epochToTime(property.time),
+		link: property.url
+	}
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<file:write doc:name="Export LamanlupaAPIResponse to Text File" doc:id="ecf27306-2be6-4cd2-8cd1-48d85fe8e212" path='#["lamanlupa_records" ++ (now() as String {format: "uuuMMddKKmmss"}) ++ ".txt"]'>
+			<file:content ><![CDATA[#[output application/json
+---
+{
+	"gathered: ": payload."gathered: ",
+	"records: ": payload."records: " map ( record , indexOfRecord ) -> {
+		location: record.location,
+		magnitude: record.magnitude,
+		date: record.date,
+		time: record.time,
+		link: record.link
+	}
+}]]]></file:content>
+		</file:write>
+	</flow>
+</mule>

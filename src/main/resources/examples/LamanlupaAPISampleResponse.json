@@ -1,0 +1,19 @@
+{
+  "gathered: ": "August 25, 2021, 07:18 AM",
+  "records: ": [
+    {
+      "location": "7 km SW of Volcano, Hawaii",
+      "magnitude": 1.85,
+      "date": "August 25, 2021",
+      "time": "06:37 AM",
+      "link": "https://earthquake.usgs.gov/earthquakes/eventpage/hv72668882"
+    },
+    {
+      "location": "7km W of St. Helena, CA",
+      "magnitude": 1.72,
+      "date": "August 25, 2021",
+      "time": "06:32 AM",
+      "link": "https://earthquake.usgs.gov/earthquakes/eventpage/nc73615096"
+    }
+  ]
+}

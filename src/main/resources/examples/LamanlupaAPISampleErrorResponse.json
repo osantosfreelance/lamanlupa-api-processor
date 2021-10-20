@@ -1,0 +1,5 @@
+{
+    "status": "FAILED",
+    "errorCode": 400,
+    "errorDescription": "Invalid parameter value found. Please try again with supported value."
+}

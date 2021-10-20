@@ -1,0 +1,14 @@
+Error 400: Bad Request
+
+Bad format value "geojss on". Valid values are: "quakeml", "geojson", "csv", "kml", "kmlraw", "xml", "text", "cap".
+
+Usage details are available from https://earthquake.usgs.gov/fdsnws/event/1
+
+Request:
+/fdsnws/event/1/query?format=geojss%20on&starttime=2021-09-10&endtime=2021-10-10
+
+Request Submitted:
+2021-10-20T07:06:29+00:00
+
+Service version:
+1.12.2
